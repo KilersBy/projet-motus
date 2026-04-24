@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    container_name: motus-php
+    ports:
+      - "3000:3000"
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      DB_PATH: /app/data/motus.sqlite
+      WORD_API_URL: ${WORD_API_URL:-https://trouve-mot.fr/api/size/{length}}
+    volumes:
+      - ./data:/app/data

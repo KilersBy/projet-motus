@@ -1,0 +1,12 @@
+let currentGame=null, wordLength=0, maxAttempts=6;
+const $=id=>document.getElementById(id);
+async function api(url, data=null){const res=await fetch(url,{method:data?'POST':'GET',headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):null});const json=await res.json();if(!res.ok)throw new Error(json.error||'Erreur');return json;}
+async function refresh(){const me=await api('/api/me');$('auth').classList.toggle('hidden',!!me.user);$('game').classList.toggle('hidden',!me.user);if(me.user){$('hello').textContent='Bonjour '+me.user.username; leaderboard();}}
+async function register(){try{await api('/api/register',{username:$('username').value,password:$('password').value});refresh()}catch(e){$('authMsg').textContent=e.message}}
+async function login(){try{await api('/api/login',{username:$('username').value,password:$('password').value});refresh()}catch(e){$('authMsg').textContent=e.message}}
+async function logout(){await api('/api/logout',{});location.reload()}
+function emptyGrid(first){$('grid').innerHTML='';for(let r=0;r<maxAttempts;r++){const row=document.createElement('div');row.className='row';for(let c=0;c<wordLength;c++){const cell=document.createElement('div');cell.className='cell';cell.textContent=c===0?first:'';row.appendChild(cell)}$('grid').appendChild(row)}}
+async function newGame(){try{const g=await api('/api/game',{difficulty:$('difficulty').value});currentGame=g.gameId;wordLength=g.length;maxAttempts=g.maxAttempts;emptyGrid(g.firstLetter);$('guess').maxLength=wordLength;$('guess').value=g.firstLetter.toLowerCase();$('msg').textContent='6 tentatives. Le mot commence par '+g.firstLetter}catch(e){$('msg').textContent=e.message}}
+async function sendGuess(){if(!currentGame)return;try{const r=await api('/api/guess',{gameId:currentGame,guess:$('guess').value});const row=$('grid').children[r.attempts-1];r.result.forEach((x,i)=>{row.children[i].textContent=x.letter;row.children[i].className='cell '+x.state});$('msg').textContent=r.status==='won'?`Victoire ! Score ${r.score}`:r.status==='lost'?`Perdu. Le mot était ${r.secret}`:'Continue !'; if(r.status!=='playing'){currentGame=null;leaderboard();}}catch(e){$('msg').textContent=e.message}}
+async function leaderboard(){const rows=await api('/api/leaderboard');$('leaderboard').innerHTML=rows.map(r=>`<li>${r.username} — ${r.best_score||0} pts (${r.victories} victoire(s))</li>`).join('')}
+refresh();
